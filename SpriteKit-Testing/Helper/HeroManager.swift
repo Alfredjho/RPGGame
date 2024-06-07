@@ -36,14 +36,5 @@ class HeroManager: SKSpriteNode, ObservableObject {
         }
     }
     
-    func checkHeroPosition(hero: SKSpriteNode, targetCoordinate: CGPoint, view: SKView?, targetScene : String, direction: Direction) {
-        print("Hero position: \(hero.position), Target position: \(targetCoordinate)")
-        
-        if direction == .right && hero.position.x >= targetCoordinate.x {
-            sceneManager.changeScene(to: targetScene , in: view, transitionDuration: 1.0)
-        } else if direction == .left && hero.position.x <= targetCoordinate.x {
-            sceneManager.changeScene(to: targetScene , in: view, transitionDuration: 1.0)
-        }
-    }
 
 }

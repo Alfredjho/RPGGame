@@ -6,35 +6,40 @@ class ViewController: NSViewController {
 
     @IBOutlet var skView: SKView!
     
+    var preloadedScenes: [GKScene] = []
+    
     override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        let window = NSApplication.shared.windows.first
-        
-        // Load 'GameScene.sks' as a GKScene. This provides gameplay related content
-        // including entities and graphs.
-        if let scene = GKScene(fileNamed: "GameScene") {
+            super.viewDidLoad()
             
-            // Get the SKScene from the loaded GKScene
-            if let sceneNode = scene.rootNode as! GameScene? {
+            let window = NSApplication.shared.windows.first
+            
+            // Preload all scenes
+            preloadScenes()
+            
+            // Present the first scene or any specific scene
+            if let firstScene = preloadedScenes.first?.rootNode as? GameScene {
+                firstScene.scaleMode = .aspectFit
                 
-                // Copy gameplay related content over to the scene
-//                sceneNode.entities = scene.entities
-//                sceneNode.graphs = scene.graphs
-                
-                // Set the scale mode to scale to fit the window
-                sceneNode.scaleMode = .aspectFit
-                
-                // Present the scene
                 if let view = self.skView {
-                    view.presentScene(sceneNode)
+                    view.presentScene(firstScene)
                     view.showsFPS = true
                     view.showsNodeCount = true
                 }
             }
+            
+            window?.toggleFullScreen(nil)
         }
-        
-        window?.toggleFullScreen(nil)
-    }
+    
+    func preloadScenes() {
+            let sceneNames = ["GameScene", "firstRoom"] // Add your SKS file names here
+            
+            for sceneName in sceneNames {
+                if let scene = GKScene(fileNamed: sceneName) {
+                    preloadedScenes.append(scene)
+                } else {
+                    print("Failed to load scene: \(sceneName)")
+                }
+            }
+        }
 }
 

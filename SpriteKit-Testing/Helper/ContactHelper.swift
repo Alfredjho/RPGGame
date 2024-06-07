@@ -13,35 +13,36 @@ enum bitMask: UInt32 {
 extension GameScene: SKPhysicsContactDelegate {
     
     func didBegin(_ contact: SKPhysicsContact) {
-        let contactMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
-        
-        if contactMask == (bitMask.fireball.rawValue | bitMask.box.rawValue) {
-            if let fireballNode = contact.bodyA.node as? SKSpriteNode, contact.bodyA.categoryBitMask == bitMask.fireball.rawValue , fireballNode.name == "fireball" {
-                fireballNode.removeFromParent()
-                print("remove fireball")
-            } else if let fireballNode = contact.bodyB.node as? SKSpriteNode, contact.bodyB.categoryBitMask == bitMask.fireball.rawValue , fireballNode.name == "fireball" {
-                fireballNode.removeFromParent()
-                print("remove fireball")
+            let contactMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
+            
+            if contactMask == (bitMask.fireball.rawValue | bitMask.box.rawValue) {
+                print("Fireball and box collision detected")
+                
+                // Debug prints for node names and bitmasks
+                if let nodeA = contact.bodyA.node {
+                    print("Node A: \(nodeA.name ?? "unknown"), Bitmask: \(contact.bodyA.categoryBitMask)")
+                }
+                if let nodeB = contact.bodyB.node {
+                    print("Node B: \(nodeB.name ?? "unknown"), Bitmask: \(contact.bodyB.categoryBitMask)")
+                }
+                
+                // Remove fireball node
+                if let fireballNode = contact.bodyA.node as? SKSpriteNode, contact.bodyA.categoryBitMask == bitMask.fireball.rawValue, fireballNode.name == "fireball" {
+                    fireballNode.removeFromParent()
+                    print("Removed fireball A")
+                } else if let fireballNode = contact.bodyB.node as? SKSpriteNode, contact.bodyB.categoryBitMask == bitMask.fireball.rawValue, fireballNode.name == "fireball" {
+                    fireballNode.removeFromParent()
+                    print("Removed fireball B")
+                }
+            
             }
-
-            if let boxNode = contact.bodyA.node as? SKSpriteNode, contact.bodyA.categoryBitMask == bitMask.box.rawValue, boxNode.name == "box" {
-                boxNode.removeFromParent()
-                print("remove box")
-            } else if let boxNode = contact.bodyB.node as? SKSpriteNode, contact.bodyB.categoryBitMask == bitMask.box.rawValue, boxNode.name == "box" {
-                boxNode.removeFromParent()
-                print("remove box")
+            
+            if contactMask == (bitMask.person.rawValue | bitMask.trapdoor.rawValue) {
+                print("Player is on the trapdoor!")
+                sceneManager.changeScene(to: "firstRoom", in: view, hero: self.hero)
             }
-        }
         
-        if contactMask == (bitMask.person.rawValue | bitMask.trapdoor.rawValue) {
-            print("Player is on the trapdoor!")
         }
-        
-        if contactMask == (bitMask.person.rawValue | bitMask.npc.rawValue) {
-            print("Player collided with NPC!")
-            isCollidingWithNPC = true
-        }
-    }
     
     func didEnd(_ contact: SKPhysicsContact) {
         let contactMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
@@ -53,7 +54,7 @@ extension GameScene: SKPhysicsContactDelegate {
                     // Berikan sedikit waktu untuk memastikan kolisi benar-benar berakhir
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         // Cek kembali apakah pemain masih dalam kolisi dengan NPC
-                        if !self.hero.frame.intersects(self.npc.frame) {
+                        if !self.hero.spriteNode.frame.intersects(self.npc.frame) {
                             self.isCollidingWithNPC = false
                             print("Player ended collision with NPC")
                         }
@@ -64,5 +65,60 @@ extension GameScene: SKPhysicsContactDelegate {
     }
 
 
+
+}
+
+extension firstRoom: SKPhysicsContactDelegate {
+    func didBegin(_ contact: SKPhysicsContact) {
+            let contactMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
+            
+            if contactMask == (bitMask.fireball.rawValue | bitMask.box.rawValue) {
+                print("Fireball and box collision detected")
+                
+                // Debug prints for node names and bitmasks
+                if let nodeA = contact.bodyA.node {
+                    print("Node A: \(nodeA.name ?? "unknown"), Bitmask: \(contact.bodyA.categoryBitMask)")
+                }
+                if let nodeB = contact.bodyB.node {
+                    print("Node B: \(nodeB.name ?? "unknown"), Bitmask: \(contact.bodyB.categoryBitMask)")
+                }
+                
+                // Remove fireball node
+                if let fireballNode = contact.bodyA.node as? SKSpriteNode, contact.bodyA.categoryBitMask == bitMask.fireball.rawValue, fireballNode.name == "fireball" {
+                    fireballNode.removeFromParent()
+                    print("Removed fireball A")
+                } else if let fireballNode = contact.bodyB.node as? SKSpriteNode, contact.bodyB.categoryBitMask == bitMask.fireball.rawValue, fireballNode.name == "fireball" {
+                    fireballNode.removeFromParent()
+                    print("Removed fireball B")
+                }
+            
+            }
+            
+            if contactMask == (bitMask.person.rawValue | bitMask.trapdoor.rawValue) {
+                print("Player is on the trapdoor!")
+                sceneManager.changeScene(to: "GameScene", in: view, hero: hero)
+            }
+        
+        }
+    
+    func didEnd(_ contact: SKPhysicsContact) {
+        let contactMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
+
+        if contactMask == (bitMask.person.rawValue | bitMask.npc.rawValue) {
+            if let bodyA = contact.bodyA.node as? SKSpriteNode, let bodyB = contact.bodyB.node as? SKSpriteNode {
+                // Cek apakah bodyA atau bodyB adalah NPC
+                if bodyA == npc || bodyB == npc {
+                    // Berikan sedikit waktu untuk memastikan kolisi benar-benar berakhir
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // Cek kembali apakah pemain masih dalam kolisi dengan NPC
+                        if !self.hero.spriteNode.frame.intersects(self.npc.frame) {
+                            self.isCollidingWithNPC = false
+                            print("Player ended collision with NPC")
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 }

@@ -2,11 +2,12 @@ import SpriteKit
 
 class SceneManager: ObservableObject {
     
-    func changeScene(to sceneName: String, in view: SKView?, transitionDuration: TimeInterval = 1.0) {
+    func changeScene(to sceneName: String, in view: SKView?, transitionDuration: TimeInterval = 1, hero: Hero) {
         guard let view = view else { return }
 
-        if let newScene = SKScene(fileNamed: sceneName) {
+        if let newScene = GameScene(fileNamed: sceneName) {
             newScene.scaleMode = .aspectFill
+            newScene.hero = hero
             let transition = SKTransition.fade(withDuration: transitionDuration)
             view.presentScene(newScene, transition: transition)
         } else {

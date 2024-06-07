@@ -7,14 +7,17 @@ class GameScene: SKScene {
     var typedText: String = ""
     
     var sceneCamera: SKCameraNode = SKCameraNode()
-    var hero: SKSpriteNode = SKSpriteNode()
     var floorCoordinates = [CGPoint]()
     var trapdoorNode: SKSpriteNode?
+    
+    var hero = Hero()
+    var labelHealth: SKLabelNode = SKLabelNode()
     
     var isStunned = false
     var facingDirection = ""
     let heroManager = HeroManager()
     let labelManager = LabelManager()
+    let sceneManager = SceneManager()
     
     var spellbook = SKSpriteNode()
     let spellList: [String] = ["fireSpell", "waterSpell"]
@@ -23,10 +26,12 @@ class GameScene: SKScene {
     var npc = SKSpriteNode()
     var npcName = SKLabelNode()
     var npcDialog = SKLabelNode()
-    let dialog: [String] = ["Helo, newcomer!", "Whatch'a doing here?", "fak yu"]
+    let dialog: [String] = ["Helo, newcomer!", "I see you want to challenge this tower, huh?",
+                            "Here, I'll give you something!", "Press [TAB] to open", "[TYPE] to chant and [ENTER] to cast!"]
     var dialogPage = 0
     
     var isCollidingWithNPC = false
+    var finishedTalking = false
     
     override func didMove(to view: SKView) {
         self.sceneCamera = childNode(withName: "sceneCamera") as! SKCameraNode
@@ -53,17 +58,16 @@ class GameScene: SKScene {
             }
         }
         
-        if let playerNode = self.childNode(withName: "player") as? SKSpriteNode {
-            hero = playerNode
-            hero.physicsBody?.categoryBitMask = bitMask.person.rawValue
-            hero.physicsBody?.contactTestBitMask = bitMask.sand.rawValue | bitMask.trapdoor.rawValue
-            hero.physicsBody?.collisionBitMask = bitMask.wall.rawValue | bitMask.npc.rawValue | bitMask.box.rawValue
-            hero.physicsBody?.allowsRotation = false
-            hero.physicsBody?.affectedByGravity = false
-        }
+        hero.spriteNode = childNode(withName: "player") as! SKSpriteNode
+        hero.setupSpriteNode()
+            
+        labelHealth = hero.spriteNode.childNode(withName: "labelHealth") as! SKLabelNode
+        labelHealth.text = "\(hero.currentHealth)"
                 
         
-        setUpBox(named: "box", position: CGPoint(x: 32, y: -16))
+        setUpBox(named: "box", position: CGPoint(x: 96, y: 0))
+        setUpBox(named: "box", position: CGPoint(x: 96, y: -16))
+        setUpBox(named: "box", position: CGPoint(x: 96, y: -32))
         
         if let npcNode = self.childNode(withName: "npc") as? SKSpriteNode {
             npc = npcNode
@@ -109,12 +113,13 @@ class GameScene: SKScene {
         let box = SKSpriteNode(color: .red, size: CGSize(width: 16, height: 16))
         box.name = name
         box.position = position
+        box.zPosition = 0
         box.texture = SKTexture(imageNamed: "barrel")
         box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
         box.physicsBody?.isDynamic = false
         box.physicsBody?.categoryBitMask = bitMask.box.rawValue
         box.physicsBody?.contactTestBitMask = bitMask.fireball.rawValue
-        box.physicsBody?.collisionBitMask = bitMask.person.rawValue
+        box.physicsBody?.collisionBitMask = bitMask.fireball.rawValue | bitMask.person.rawValue
         addChild(box)
     }
 
@@ -177,19 +182,23 @@ class GameScene: SKScene {
         
         switch event.keyCode {
         case 123:
-            heroManager.moveHero(direction: .left, hero: hero)
+            hero.move(direction: .left)
         case 124:
-            heroManager.moveHero(direction: .right, hero: hero)
+            hero.move(direction: .right)
         case 126:
-            heroManager.moveHero(direction: .up, hero: hero)
+            hero.move(direction: .up)
         case 125:
-            heroManager.moveHero(direction: .down, hero: hero)
+            hero.move(direction: .down)
         case 48:
-            openSpellBook()
+            if finishedTalking {
+                openSpellBook()
+            }
         case 36: // Enter key
-            castSpell(direction: heroManager.heroFacingDirection)
-            typedText = ""
-            labelManager.updateLabel(label: textLabel, typedText: typedText)
+            if finishedTalking{
+                castSpell(direction: hero.facingDirection)
+                typedText = ""
+                labelManager.updateLabel(label: textLabel, typedText: typedText)
+            }
         case 49: // Space key
         if isCollidingWithNPC {
             npcTalk()
@@ -197,12 +206,14 @@ class GameScene: SKScene {
             print("Space key pressed, but no collision with NPC")
         }
         default:
-            spellbook.isHidden = true
-            if let characters = event.characters {
-                for char in characters {
-                    if char.isLetter || char.isWhitespace || char.isNumber {
-                        typedText.append(char)
-                        labelManager.updateLabel(label: textLabel, typedText: typedText)
+            if(finishedTalking){
+                spellbook.isHidden = true
+                if let characters = event.characters {
+                    for char in characters {
+                        if char.isLetter || char.isWhitespace || char.isNumber {
+                            typedText.append(char)
+                            labelManager.updateLabel(label: textLabel, typedText: typedText)
+                        }
                     }
                 }
             }
@@ -233,6 +244,7 @@ class GameScene: SKScene {
             dialogPage += 1
             if dialogPage >= dialog.count {
                 npcDialog.isHidden = true
+                finishedTalking = true
             } else {
                 npcDialog.text = dialog[dialogPage]
             }
@@ -252,57 +264,58 @@ class GameScene: SKScene {
     
     func castFireball(direction: String) {
         print("fireball casted")
-        
-        // Disable hero physics temporarily
-        let heroPhysicsBody = hero.physicsBody
-        hero.physicsBody = nil
-        
+
         let fireball = SKSpriteNode(texture: SKTexture(imageNamed: "fireball"))
-        fireball.position = hero.position
+        fireball.position = hero.spriteNode.position
+        fireball.zPosition = 0
         fireball.size = CGSize(width: 16, height: 16)
-        fireball.zPosition = 10
-        fireball.physicsBody = SKPhysicsBody(circleOfRadius: fireball.size.width / 2)
+        fireball.physicsBody = SKPhysicsBody(rectangleOf: fireball.size)
         fireball.physicsBody?.isDynamic = true
-        fireball.physicsBody?.categoryBitMask = bitMask.fireball.rawValue 
+        fireball.physicsBody?.categoryBitMask = bitMask.fireball.rawValue
         fireball.physicsBody?.contactTestBitMask = bitMask.box.rawValue
-        fireball.physicsBody?.collisionBitMask = 0
+        fireball.physicsBody?.collisionBitMask = bitMask.box.rawValue
         fireball.physicsBody?.usesPreciseCollisionDetection = true
         fireball.physicsBody?.affectedByGravity = false
+        fireball.name = "fireball"
         addChild(fireball)
 
         var moveAction: SKAction
         switch direction {
         case "right":
-            moveAction = SKAction.move(by: CGVector(dx: 800, dy: 0), duration: 0.5)
+            moveAction = SKAction.move(by: CGVector(dx: 80, dy: 0), duration: 0.25)
         case "left":
-            moveAction = SKAction.move(by: CGVector(dx: -800, dy: 0), duration: 0.5)
+            moveAction = SKAction.move(by: CGVector(dx: -80, dy: 0), duration: 0.25)
         case "up":
-            moveAction = SKAction.move(by: CGVector(dx: 0, dy: 800), duration: 0.5)
+            moveAction = SKAction.move(by: CGVector(dx: 0, dy: 80), duration: 0.25)
         case "down":
-            moveAction = SKAction.move(by: CGVector(dx: 0, dy: -800), duration: 0.5)
+            moveAction = SKAction.move(by: CGVector(dx: 0, dy: -80), duration: 0.25)
         default:
             return
         }
 
         fireball.run(moveAction) {
             fireball.removeFromParent()
-            // Re-enable hero physics after fireball is cast
-            self.hero.physicsBody = heroPhysicsBody
         }
     }
 
+
     
     override func update(_ currentTime: TimeInterval) {
-        sceneCamera.position = hero.position
-        spellbook.position.x = hero.position.x
-        spellbook.position.y = hero.position.y + 64
-        labelManager.setLabelAboveHero(label: textLabel, hero: hero)
+        sceneCamera.position = hero.spriteNode.position
+        labelHealth.text = "\(hero.currentHealth)"
+        sceneCamera.position = hero.spriteNode.position
+        
+        spellbook.position.x = hero.spriteNode.position.x
+        spellbook.position.y = hero.spriteNode.position.y + 64
+        labelManager.setLabelAboveHero(label: textLabel, hero: hero.spriteNode)
         
         // Cek apakah pemain masih dalam kolisi dengan NPC
-            if hero.frame.intersects(npc.frame) {
+        if hero.spriteNode.frame.intersects(npc.frame) {
                 if !isCollidingWithNPC {
                     isCollidingWithNPC = true
                     print("Player collided with NPC!")
+                    hero.currentHealth -= 10
+                    print(" kebaca darah: \(hero.currentHealth)")
                 }
             } else {
                 if isCollidingWithNPC {
