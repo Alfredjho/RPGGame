@@ -2,12 +2,12 @@ import SpriteKit
 
 enum bitMask: UInt32 {
     case person = 0x1
-    case sand = 0x5
-    case wall = 0x2
-    case fireball = 0x4
-    case trapdoor = 0x8
-    case npc = 0x16
-    case box = 0x32
+    case sand = 0x2
+    case wall = 0x4
+    case fireball = 0x8
+    case trapdoor = 0x10
+    case npc = 0x20
+    case box = 0x40
 }
 
 extension GameScene: SKPhysicsContactDelegate {

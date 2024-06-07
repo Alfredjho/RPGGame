@@ -18,10 +18,13 @@ class GameScene: SKScene {
     
     var spellbook = SKSpriteNode()
     let spellList: [String] = ["fireSpell", "waterSpell"]
-    var page = 0
+    var spellPage = 0
     
     var npc = SKSpriteNode()
     var npcName = SKLabelNode()
+    var npcDialog = SKLabelNode()
+    let dialog: [String] = ["Helo, newcomer!", "Whatch'a doing here?", "fak yu"]
+    var dialogPage = 0
     
     var isCollidingWithNPC = false
     
@@ -31,14 +34,13 @@ class GameScene: SKScene {
         // Initialize and position your label
         textLabel = SKLabelNode(fontNamed: "Helvetica")
         textLabel.fontSize = 16
-        textLabel.zPosition = 1
         textLabel.text = typedText
         self.addChild(textLabel)
         
         spellbook = childNode(withName: "spellbook") as! SKSpriteNode
         spellbook.texture = SKTexture(imageNamed: spellList[0])
         spellbook.isHidden = true
-        spellbook.zPosition = 2
+        spellbook.zPosition = 1
         
         // Set up physics
         self.physicsWorld.contactDelegate = self
@@ -54,8 +56,8 @@ class GameScene: SKScene {
         if let playerNode = self.childNode(withName: "player") as? SKSpriteNode {
             hero = playerNode
             hero.physicsBody?.categoryBitMask = bitMask.person.rawValue
-            hero.physicsBody?.contactTestBitMask = bitMask.sand.rawValue
-            hero.physicsBody?.collisionBitMask = bitMask.wall.rawValue
+            hero.physicsBody?.contactTestBitMask = bitMask.sand.rawValue | bitMask.trapdoor.rawValue
+            hero.physicsBody?.collisionBitMask = bitMask.wall.rawValue | bitMask.npc.rawValue | bitMask.box.rawValue
             hero.physicsBody?.allowsRotation = false
             hero.physicsBody?.affectedByGravity = false
         }
@@ -68,10 +70,14 @@ class GameScene: SKScene {
             npc.physicsBody?.categoryBitMask = bitMask.npc.rawValue
             npc.physicsBody?.contactTestBitMask = bitMask.sand.rawValue
             npc.physicsBody?.collisionBitMask = bitMask.person.rawValue
-            npc.zPosition = 1
+
             
             npcName = (npc.childNode(withName: "npcName") as? SKLabelNode)!
-            npcName.zPosition = 1
+
+            
+            npcDialog = (npc.childNode(withName: "npcDialog") as? SKLabelNode)!
+            npcDialog.isHidden = true
+ 
         }
         
         changeRandomFloorTileToTrapdoor()
@@ -91,7 +97,7 @@ class GameScene: SKScene {
             trapdoorNode.physicsBody?.affectedByGravity = false
             trapdoorNode.physicsBody?.isDynamic = false
             trapdoorNode.physicsBody?.friction = 1
-            trapdoorNode.zPosition = 1
+            trapdoorNode.zPosition = -1
             
             self.addChild(trapdoorNode)
             self.trapdoorNode = trapdoorNode
@@ -103,7 +109,6 @@ class GameScene: SKScene {
         let box = SKSpriteNode(color: .red, size: CGSize(width: 16, height: 16))
         box.name = name
         box.position = position
-        box.zPosition = 1
         box.texture = SKTexture(imageNamed: "barrel")
         box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
         box.physicsBody?.isDynamic = false
@@ -154,7 +159,7 @@ class GameScene: SKScene {
                     tileNode.physicsBody?.affectedByGravity = false
                     tileNode.physicsBody?.isDynamic = false
                     tileNode.physicsBody?.friction = 1
-                    tileNode.zPosition = 0
+                    tileNode.zPosition = -1
                     
                     tileNode.position = CGPoint(x: tileNode.position.x + startLocation.x, y: tileNode.position.y + startLocation.y)
                     self.addChild(tileNode)
@@ -187,20 +192,7 @@ class GameScene: SKScene {
             labelManager.updateLabel(label: textLabel, typedText: typedText)
         case 49: // Space key
         if isCollidingWithNPC {
-            // Hapus label "Hi" yang sudah ada sebelumnya
-            npc.childNode(withName: "hiLabel")?.removeFromParent()
-
-            let hiLabel = SKLabelNode(text: "Hi")
-            hiLabel.fontSize = 16
-            hiLabel.fontColor = .white
-            hiLabel.position = CGPoint(x: 0, y: npc.size.height / 2 + 10)
-            hiLabel.zPosition = 2
-            hiLabel.name = "hiLabel"
-            hiLabel.isHidden = false
-            npc.addChild(hiLabel)
-            
-
-            print("Added 'Hi' label to NPC")
+            npcTalk()
         } else {
             print("Space key pressed, but no collision with NPC")
         }
@@ -220,16 +212,31 @@ class GameScene: SKScene {
     func openSpellBook() {
         if spellbook.isHidden {
            spellbook.isHidden = false
-           page = 0
-           spellbook.texture = SKTexture(imageNamed: spellList[page])
+           spellPage = 0
+           spellbook.texture = SKTexture(imageNamed: spellList[spellPage])
        } else {
-           page += 1
-           if page >= spellList.count {
+           spellPage += 1
+           if spellPage >= spellList.count {
                spellbook.isHidden = true
            } else {
-               spellbook.texture = SKTexture(imageNamed: spellList[page])
+               spellbook.texture = SKTexture(imageNamed: spellList[spellPage])
            }
        }
+    }
+    
+    func npcTalk() {
+        if npcDialog.isHidden {
+            npcDialog.isHidden = false
+            dialogPage = 0
+            npcDialog.text = dialog[dialogPage]
+        } else {
+            dialogPage += 1
+            if dialogPage >= dialog.count {
+                npcDialog.isHidden = true
+            } else {
+                npcDialog.text = dialog[dialogPage]
+            }
+        }
     }
     
     func castSpell(direction: String) {
