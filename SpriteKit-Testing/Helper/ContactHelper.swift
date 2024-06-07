@@ -71,7 +71,7 @@ extension GameScene: SKPhysicsContactDelegate {
 extension firstRoom: SKPhysicsContactDelegate {
     func didBegin(_ contact: SKPhysicsContact) {
             let contactMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
-            
+        
             if contactMask == (bitMask.fireball.rawValue | bitMask.box.rawValue) {
                 print("Fireball and box collision detected")
                 
@@ -120,5 +120,5 @@ extension firstRoom: SKPhysicsContactDelegate {
             }
         }
     }
-
+    
 }

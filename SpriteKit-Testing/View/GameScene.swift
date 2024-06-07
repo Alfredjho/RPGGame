@@ -32,6 +32,11 @@ class GameScene: SKScene {
     
     var isCollidingWithNPC = false
     var finishedTalking = false
+    var targetedBox = 0
+    
+    var box1 = SKSpriteNode()
+    var box2 = SKSpriteNode()
+    var box3 = SKSpriteNode()
     
     override func didMove(to view: SKView) {
         self.sceneCamera = childNode(withName: "sceneCamera") as! SKCameraNode
@@ -65,9 +70,14 @@ class GameScene: SKScene {
         labelHealth.text = "\(hero.currentHealth)"
                 
         
-        setUpBox(named: "box", position: CGPoint(x: 96, y: 0))
-        setUpBox(named: "box", position: CGPoint(x: 96, y: -16))
-        setUpBox(named: "box", position: CGPoint(x: 96, y: -32))
+        box1 = setUpBox(named: "box1", position: CGPoint(x: 96, y: 0))
+        box2 = setUpBox(named: "box2", position: CGPoint(x: 96, y: -16))
+        box3 = setUpBox(named: "box3", position: CGPoint(x: 96, y: -32))
+        
+        self.addChild(box1)
+        self.addChild(box2)
+        self.addChild(box3)
+        
         
         if let npcNode = self.childNode(withName: "npc") as? SKSpriteNode {
             npc = npcNode
@@ -109,7 +119,7 @@ class GameScene: SKScene {
     }
 
     
-    func setUpBox(named name: String, position: CGPoint) {
+    func setUpBox(named name: String, position: CGPoint) -> SKSpriteNode {
         let box = SKSpriteNode(color: .red, size: CGSize(width: 16, height: 16))
         box.name = name
         box.position = position
@@ -120,7 +130,8 @@ class GameScene: SKScene {
         box.physicsBody?.categoryBitMask = bitMask.box.rawValue
         box.physicsBody?.contactTestBitMask = bitMask.fireball.rawValue
         box.physicsBody?.collisionBitMask = bitMask.fireball.rawValue | bitMask.person.rawValue
-        addChild(box)
+        
+        return box
     }
 
     
@@ -189,6 +200,12 @@ class GameScene: SKScene {
             hero.move(direction: .up)
         case 125:
             hero.move(direction: .down)
+        case 0x12: //angka 1
+            targetedBox = 1
+        case 0x13: //angka 2
+            targetedBox = 2
+        case 0x14: //angka 3
+            targetedBox = 3
         case 48:
             if finishedTalking {
                 openSpellBook()
@@ -252,15 +269,53 @@ class GameScene: SKScene {
     }
     
     func castSpell(direction: String) {
-        if typedText.lowercased() == "fireball" {
-            castFireball(direction: direction)
-        } else {
-            isStunned = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                self.isStunned = false
+            if typedText.lowercased() == "fireball" {
+                if targetedBox != 0 {
+                    castFireballtoTarget(target: targetedBox)
+                } else {
+                    castFireball(direction: direction)
+                }
+            } else {
+                isStunned = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.isStunned = false
+                }
             }
         }
-    }
+    
+    func castFireballtoTarget(target: Int) {
+            print("fireball casted")
+
+            let fireball = SKSpriteNode(texture: SKTexture(imageNamed: "fireball"))
+            fireball.position = hero.spriteNode.position
+            fireball.zPosition = 0
+            fireball.size = CGSize(width: 16, height: 16)
+            fireball.physicsBody = SKPhysicsBody(rectangleOf: fireball.size)
+            fireball.physicsBody?.isDynamic = true
+            fireball.physicsBody?.categoryBitMask = bitMask.fireball.rawValue
+            fireball.physicsBody?.contactTestBitMask = bitMask.box.rawValue
+            fireball.physicsBody?.collisionBitMask = bitMask.box.rawValue
+            fireball.physicsBody?.usesPreciseCollisionDetection = true
+            fireball.physicsBody?.affectedByGravity = false
+            fireball.name = "fireball"
+            addChild(fireball)
+
+            var moveAction: SKAction
+            switch target {
+            case 1:
+                moveAction = SKAction.move(to: box1.position, duration: 0.25)
+            case 2:
+                moveAction = SKAction.move(to: box2.position, duration: 0.25)
+            case 3:
+                moveAction = SKAction.move(to: box3.position, duration: 0.25)
+            default:
+                return
+            }
+
+            fireball.run(moveAction) {
+                fireball.removeFromParent()
+            }
+        }
     
     func castFireball(direction: String) {
         print("fireball casted")
